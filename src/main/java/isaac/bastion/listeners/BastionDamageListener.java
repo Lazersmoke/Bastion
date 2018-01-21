@@ -13,7 +13,9 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.entity.EnderPearl;
+import org.bukkit.entity.Snowball;
 import org.bukkit.entity.Player;
+import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -23,6 +25,7 @@ import org.bukkit.event.block.BlockPistonExtendEvent;
 import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
@@ -221,6 +224,24 @@ public final class BastionDamageListener implements Listener {
 		if (event.getEntity() instanceof EnderPearl) {
 			EnderPearl pearl = (EnderPearl) event.getEntity();
 			pearlManager.handlePearlLaunched(pearl);
+		}
+	}
+
+	@EventHandler(priority = EventPriority.LOWEST, ignoreCancelled=true)
+	public void onSnowballLand(ProjectileHitEvent event) {
+		if (event.getEntity() instanceof Snowball) {
+			ProjectileSource shooter = ((Snowball) event.getEntity()).getShooter();
+			if(!(shooter instanceof Player)) {
+				return;
+			}
+			Player player = (Player) shooter;
+			Set<Block> blocks = new CopyOnWriteArraySet<Block>();
+			blocks.add(event.getHitBlock());
+			Set<BastionBlock> blocking = blockManager.shouldStopBlockByBlockingBastion(null, blocks,player.getUniqueId());
+			if (blocking.size() != 0 && !groupManager.canPlaceBlock(player, blocking)){
+				blockManager.erodeFromPlace(player, blocking);
+				player.sendMessage(ChatColor.RED + "Bastion melted snowball");
+			}
 		}
 	}
 }
